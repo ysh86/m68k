@@ -13,6 +13,9 @@ INC_FLAGS := $(addprefix -I,$(INC_DIRS))
 # pkgconfig
 # none
 
+# libs
+INC_FLAGS += -I./Musashi -DMUSASHI_CNF=\"mym68kconf.h\"
+
 CPPFLAGS ?= $(INC_FLAGS) -MMD -MP -D_POSIX_C_SOURCE=200809L
 CPPFLAGS += $(PKG_CONFIG_CFLAGS)
 LDFLAGS += $(PKG_CONFIG_LIBS)
