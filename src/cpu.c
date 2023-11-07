@@ -1,20 +1,9 @@
 #include <stdio.h>
-#include <assert.h>
+
+#include "m68k.h"
 
 #include "cpu.h"
-#include "inst.h"
 #include "util.h"
-
-char *toRegName[] = {
-    "r0",
-    "r1",
-    "r2",
-    "r3",
-    "r4",
-    "r5",
-    "sp", //"r6",
-    "pc", //"r7",
-};
 
 void init(
     cpu_t *pcpu,
@@ -24,6 +13,9 @@ void init(
     syscall_t syscallHook,
     syscall_string_t syscallStringHook,
     uint16_t sp, uint16_t pc) {
+    // support only one cpu
+    theCPU = pcpu;
+
     // machine
     pcpu->ctx = ctx;
     pcpu->mmuV2R = v2r;
@@ -31,138 +23,70 @@ void init(
     pcpu->syscallHook = syscallHook;
     pcpu->syscallStringHook = syscallStringHook;
 
-    // set reg ptr
-    pcpu->r[0] = &pcpu->r0;
-    pcpu->r[1] = &pcpu->r1;
-    pcpu->r[2] = &pcpu->r2;
-    pcpu->r[3] = &pcpu->r3;
-    pcpu->r[4] = &pcpu->r4;
-    pcpu->r[5] = &pcpu->r5;
-    pcpu->r[6] = &pcpu->sp;
-    pcpu->r[7] = &pcpu->pc;
+    // core
+    m68k_set_cpu_type(M68K_CPU_TYPE_68020);
+    m68k_init();
+    m68k_pulse_reset();
 
-    // clear regs
-    pcpu->r0 = 0;
-    pcpu->r1 = 0;
-    pcpu->r2 = 0;
-    pcpu->r3 = 0;
-    pcpu->r4 = 0;
-    pcpu->r5 = 0;
-    pcpu->sp = sp;
-    pcpu->pc = pc;
-    pcpu->psw = 0;
+    m68k_set_reg(M68K_REG_SR, 0x2000); // supervisor mode
+    m68k_set_reg(M68K_REG_USP, sp);
+    m68k_set_reg(M68K_REG_SR, 0x0000); // user mode
+    m68k_set_reg(M68K_REG_SP, sp);
+    m68k_set_reg(M68K_REG_ISP, SIZE_OF_VECTORS); // for exception
+    m68k_set_reg(M68K_REG_PPC, pc); // for disasm
+    m68k_set_reg(M68K_REG_PC, pc);
+    pcpu->pc = pc; // TODO: for syscall
+    pcpu->sp = sp; // TODO: debug
 }
 
 uint16_t fetch(cpu_t *pcpu) {
-    pcpu->addr = pcpu->pc;
-    pcpu->bin = read16(false, pcpu->mmuV2R(pcpu->ctx, pcpu->pc));
-    pcpu->pc += 2;
-    return pcpu->bin;
+    // dummy
+    return 0;
 }
 
 void decode(cpu_t *pcpu) {
-    pcpu->inst = NULL;
+    // dummy
+}
 
-    pcpu->isByte = false;
-    pcpu->isEven = false;
-    pcpu->mode0 = (pcpu->bin & 0x0e00) >> 9;
-    pcpu->reg0 = (pcpu->bin & 0x01c0) >> 6;
-    pcpu->mode1 = (pcpu->bin & 0x0038) >> 3;
-    pcpu->reg1 = pcpu->bin & 0x0007;
-    pcpu->offset = pcpu->bin & 0x00ff;
-    pcpu->syscallID = pcpu->bin & 0x003f;
+void exec(cpu_t *pcpu) {
+    m68k_execute(1);
+    pcpu->pc = m68k_get_reg(NULL, M68K_REG_PC); // TODO: for syscall
+    pcpu->sp = m68k_get_reg(NULL, M68K_REG_SP); // TODO: debug
+}
 
-    uint16_t op = pcpu->bin >> 12;
-    instruction_t *table = NULL;
-    do {
-        uint8_t op_temp = op & 7;
-        if (op_temp != 0 && op_temp != 7) {
-            table = doubleOperand0;
-            if (op & 8 && op_temp != 6) {
-                pcpu->isByte = true;
-            }
-            break;
-        }
-        if (op == 7) {
-            if (pcpu->mode0 != 5) {
-                table = doubleOperand1;
-                op = (pcpu->bin >> 9) & 7; // (4+3) bits
-                if (op == 7) {
-                    // sob
-                    pcpu->offset &= 0x3f; // 6 bits positive num
-                } else {
-                    if ((pcpu->reg0 & 1) == 0) {
-                        pcpu->isEven = true;
-                    }
-                }
-            } else {
-                table = floatingPoint0;
-                op = pcpu->bin >> 9; // (4+3) bits
-                // TODO: not implemented
-                assert(0);
-            }
-            break;
-        }
-        if (op == 15) {
-            table = floatingPoint1;
-            op = pcpu->offset & 0xf; // 4 bits
-            break;
-        }
-        if (op == 0 || op == 8) {
-            if (pcpu->mode0 & 4) {
-                if (op == 0) {
-                    table = singleOperand0;
-                } else {
-                    table = singleOperand1;
-                    if (pcpu->mode0 == 5 || (pcpu->mode0 == 6 && pcpu->reg0 < 4)) {
-                        pcpu->isByte = true;
-                    }
-                }
-                op = ((pcpu->mode0 & 3) << 3) | pcpu->reg0; // (2+3) bits
-            } else {
-                // conditionalBranch
-                if (op == 0) {
-                    table = conditionalBranch0;
-                    op = ((pcpu->mode0 & 3) << 1) | (pcpu->reg0 >> 2); // (2+1) bits
-                    if (op == 0) {
-                        // systemMisc
-                        table = systemMisc;
-                        if (pcpu->reg0 == 0 && pcpu->mode1 == 0) {
-                            // interrupt, misc
-                            op = pcpu->reg1;
-                        } else if (pcpu->reg0 == 1) {
-                            // jmp
-                            op = 8;
-                        } else if (pcpu->reg0 == 2) {
-                            op = 9 + (pcpu->mode1 >> 1);
-                            if (op == 9) {
-                                // subroutine
-                            } else {
-                                // condition
-                                table = clearSet;
-                                op = pcpu->bin & 0x1f;
-                            }
-                        } else if (pcpu->reg0 == 3) {
-                            // swab
-                            op = 13;
-                        } else {
-                            // TODO: unknown op
-                            assert(0);
-                        }
-                    }
-                } else {
-                    table = conditionalBranch1;
-                    op = ((pcpu->mode0 & 3) << 1) | (pcpu->reg0 >> 2); // (2+1) bits
-                }
-            }
-            break;
-        }
-    } while(0);
+void disasm(cpu_t *pcpu) {
+    uint32_t ppc = m68k_get_reg(NULL, M68K_REG_PPC);
+    char str[1024];
+    m68k_disassemble(str, ppc, m68k_get_reg(NULL, M68K_REG_CPU_TYPE));
+    printf("/ %08x: %s\n", ppc, str);
+#if 0
+    printf("/ pc=%08x, sr=%04x, sp=%08x, usp=%08x, isp=%08x\n"
+        "/  d: %08x, %08x, %08x, %08x, %08x, %08x, %08x, %08x\n"
+        "/  a: %08x, %08x, %08x, %08x, %08x, %08x, %08x, %08x\n",
+        ppc,
+        m68k_get_reg(NULL, M68K_REG_SR),
+        m68k_get_reg(NULL, M68K_REG_SP),
+        m68k_get_reg(NULL, M68K_REG_USP),
+        m68k_get_reg(NULL, M68K_REG_ISP),
+        m68k_get_reg(NULL, M68K_REG_D0),
+        m68k_get_reg(NULL, M68K_REG_D1),
+        m68k_get_reg(NULL, M68K_REG_D2),
+        m68k_get_reg(NULL, M68K_REG_D3),
+        m68k_get_reg(NULL, M68K_REG_D4),
+        m68k_get_reg(NULL, M68K_REG_D5),
+        m68k_get_reg(NULL, M68K_REG_D6),
+        m68k_get_reg(NULL, M68K_REG_D7),
+        m68k_get_reg(NULL, M68K_REG_A0),
+        m68k_get_reg(NULL, M68K_REG_A1),
+        m68k_get_reg(NULL, M68K_REG_A2),
+        m68k_get_reg(NULL, M68K_REG_A3),
+        m68k_get_reg(NULL, M68K_REG_A4),
+        m68k_get_reg(NULL, M68K_REG_A5),
+        m68k_get_reg(NULL, M68K_REG_A6),
+        m68k_get_reg(NULL, M68K_REG_A7)
+    );
+#endif
 
-    if (table == NULL || table[op].mnemonic == NULL) {
-        // TODO: unknown op or not implemented
-        fprintf(stderr, "/ [ERR] Unknown: %04x: %04x\n", pcpu->addr, pcpu->bin);
-        assert(0);
-    }
-    pcpu->inst = &table[op];
+    // TODO
+    //pcpu->syscallStringHook()
 }
