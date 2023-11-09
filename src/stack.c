@@ -1,5 +1,4 @@
 #include "cpu.h"
-#include "util.h"
 
 #include "m68k.h"
 
@@ -8,6 +7,8 @@ static inline void write16(uint8_t *p, uint16_t data) {
     p[1] = data & 0xff;
 }
 
+// TODO: virtual memory page をまたぐと動かない
+// TODO: machine 側に持っていくべきか？
 uint16_t pushArgs(cpu_t *pcpu, int argc, uint8_t *args, size_t argsbytes) {
     uint32_t sp = m68k_get_reg(NULL, M68K_REG_SP);
 
@@ -41,6 +42,5 @@ uint16_t pushArgs(cpu_t *pcpu, int argc, uint8_t *args, size_t argsbytes) {
     write16(rsp, 0xffff);
 
     m68k_set_reg(M68K_REG_SP, vsp);
-    pcpu->sp = vsp;
     return vsp;
 }

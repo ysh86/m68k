@@ -21,9 +21,7 @@ struct cpu_tag {
     syscall_string_t syscallStringHook;
 
     // core: fetch, decode, exec
-    uint8_t syscallID;
-    uint32_t pc; // TODO: for syscall
-    uint32_t sp; // TODO: debug
+    // the only one core in Musashi lib.
 };
 #ifndef _CPU_T_
 #define _CPU_T_
@@ -39,6 +37,8 @@ void init(
     syscall_string_t syscallStringHook,
     uint16_t sp, uint16_t pc);
 uint16_t pushArgs(cpu_t *pcpu, int argc, uint8_t *args, size_t argsbytes);
+
+uint32_t rte(cpu_t *pcpu, uint16_t ustatus, uint32_t usp, uint32_t isp, uint32_t ppc, uint32_t pc);
 
 uint16_t fetch(cpu_t *pcpu);
 void decode(cpu_t *pcpu);

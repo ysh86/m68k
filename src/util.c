@@ -1,3 +1,8 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <arpa/inet.h>
+#include <assert.h>
+
 #include "util.h"
 
 #include "m68k.h"
@@ -14,13 +19,13 @@ unsigned int  m68k_read_memory_16(unsigned int address) {
     return ((hi << 8) | lo);
 }
 unsigned int  m68k_read_memory_32(unsigned int address) {
-    if (address < 0x00000400) {
-        printf("/ exception %d\n", address>>2);
-        printf("/ fetch 32: addr=%08x\n"
-            "/ pc=%08x, sr=%04x, sp=%08x, usp=%08x, isp=%08x\n"
+    if (address < SIZE_OF_VECTORS) {
+        uint32_t no = address >> 2;
+#if 1
+        printf("/ %08x: exception %d\n", address, no);
+        printf("/ pc=%08x, sr=%04x, sp=%08x, usp=%08x, isp=%08x\n"
             "/  d: %08x, %08x, %08x, %08x, %08x, %08x, %08x, %08x\n"
             "/  a: %08x, %08x, %08x, %08x, %08x, %08x, %08x, %08x\n",
-            address,
             m68k_get_reg(NULL, M68K_REG_PC),
             m68k_get_reg(NULL, M68K_REG_SR),
             m68k_get_reg(NULL, M68K_REG_SP),
@@ -43,15 +48,46 @@ unsigned int  m68k_read_memory_32(unsigned int address) {
             m68k_get_reg(NULL, M68K_REG_A6),
             m68k_get_reg(NULL, M68K_REG_A7)
         );
-        for (uint32_t addr = m68k_get_reg(NULL, M68K_REG_ISP); addr < 0x0400; addr += 2) {
+        for (uint32_t addr = m68k_get_reg(NULL, M68K_REG_ISP); addr < SIZE_OF_VECTORS; addr += 2) {
             uint16_t *ra16 = (uint16_t *)(theCPU->mmuV2R(theCPU->ctx, addr));
             printf("/    %08x: %04x\n", addr, ntohs(*ra16));
         }
+#endif
 
-        // TODO
-        //theCPU->syscallHook(theCPU->ctx)
-        exit(-1);
+        if (no == 32) {
+            // trap
+            uint16_t sr = m68k_get_reg(NULL, M68K_REG_SR);
+            assert((sr & 0x3000) == 0x2000); // supervisor mode
+
+            theCPU->syscallHook(theCPU->ctx);
+
+            // rte manually
+            // isp is word-aligned.
+            uint32_t isp = m68k_get_reg(NULL, M68K_REG_SP);
+            sr = ntohs(*(uint16_t *)(theCPU->mmuV2R(theCPU->ctx, isp)));
+            isp += 2;
+            uint16_t pch = ntohs(*(uint16_t *)(theCPU->mmuV2R(theCPU->ctx, isp)));
+            isp += 2;
+            uint16_t pcl = ntohs(*(uint16_t *)(theCPU->mmuV2R(theCPU->ctx, isp)));
+            isp += 2;
+            uint16_t offset = ntohs(*(uint16_t *)(theCPU->mmuV2R(theCPU->ctx, isp)));
+            isp += 2;
+            m68k_set_reg(M68K_REG_SP, isp);
+
+            uint32_t pc = ((pch<<16) | pcl);
+            uint32_t usp = m68k_get_reg(NULL, M68K_REG_USP);
+
+            // return to user mode
+            assert((sr & 0x3000) == 0);
+            assert((offset&0xf000) == 0);
+            assert((offset&0x0fff) == 0x80);
+            return rte(theCPU, sr, usp, isp, pc-2, pc);
+        } else {
+            fprintf(stderr, "exception %d is not implemented\n", no);
+            exit(-1);
+        }
     }
+
     uint8_t b24 = *theCPU->mmuV2R(theCPU->ctx, address);
     uint8_t b16 = *theCPU->mmuV2R(theCPU->ctx, address+1);
     uint8_t b8 = *theCPU->mmuV2R(theCPU->ctx, address+2);

@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <assert.h>
 
 #include "m68k.h"
 
@@ -28,15 +29,31 @@ void init(
     m68k_init();
     m68k_pulse_reset();
 
-    m68k_set_reg(M68K_REG_SR, 0x2000); // supervisor mode
-    m68k_set_reg(M68K_REG_USP, sp);
-    m68k_set_reg(M68K_REG_SR, 0x0000); // user mode
-    m68k_set_reg(M68K_REG_SP, sp);
-    m68k_set_reg(M68K_REG_ISP, SIZE_OF_VECTORS); // for exception
-    m68k_set_reg(M68K_REG_PPC, pc); // for disasm
+    // go to user mode
+    rte(pcpu, 0x0000, sp, SIZE_OF_VECTORS, pc, pc);
+}
+
+uint32_t rte(cpu_t *pcpu, uint16_t ustatus, uint32_t usp, uint32_t isp, uint32_t ppc, uint32_t pc) {
+    uint16_t sr = m68k_get_reg(NULL, M68K_REG_SR);
+    assert((sr & 0x3000) == 0x2000); // supervisor mode
+
+    m68k_set_reg(M68K_REG_USP, usp);
+    m68k_set_reg(M68K_REG_SR, ustatus); // user mode
+    m68k_set_reg(M68K_REG_SP, usp);
+    m68k_set_reg(M68K_REG_ISP, isp); // for exception
+    m68k_set_reg(M68K_REG_PPC, ppc); // for disasm
     m68k_set_reg(M68K_REG_PC, pc);
-    pcpu->pc = pc; // TODO: for syscall
-    pcpu->sp = sp; // TODO: debug
+#if 1
+    printf("/ rte manually: pc=%08x, sr=%04x, sp=%08x, usp=%08x, isp=%08x, a7=%08x\n",
+        m68k_get_reg(NULL, M68K_REG_PC),
+        m68k_get_reg(NULL, M68K_REG_SR),
+        m68k_get_reg(NULL, M68K_REG_SP),
+        m68k_get_reg(NULL, M68K_REG_USP),
+        m68k_get_reg(NULL, M68K_REG_ISP),
+        m68k_get_reg(NULL, M68K_REG_A7)
+    );
+#endif
+    return pc;
 }
 
 uint16_t fetch(cpu_t *pcpu) {
@@ -50,8 +67,6 @@ void decode(cpu_t *pcpu) {
 
 void exec(cpu_t *pcpu) {
     m68k_execute(1);
-    pcpu->pc = m68k_get_reg(NULL, M68K_REG_PC); // TODO: for syscall
-    pcpu->sp = m68k_get_reg(NULL, M68K_REG_SP); // TODO: debug
 }
 
 void disasm(cpu_t *pcpu) {
