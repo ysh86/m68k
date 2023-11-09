@@ -43,7 +43,7 @@ uint32_t rte(cpu_t *pcpu, uint16_t ustatus, uint32_t usp, uint32_t isp, uint32_t
     m68k_set_reg(M68K_REG_ISP, isp); // for exception
     m68k_set_reg(M68K_REG_PPC, ppc); // for disasm
     m68k_set_reg(M68K_REG_PC, pc);
-#if 1
+#if 0
     printf("/ rte manually: pc=%08x, sr=%04x, sp=%08x, usp=%08x, isp=%08x, a7=%08x\n",
         m68k_get_reg(NULL, M68K_REG_PC),
         m68k_get_reg(NULL, M68K_REG_SR),

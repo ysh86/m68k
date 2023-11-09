@@ -21,7 +21,7 @@ unsigned int  m68k_read_memory_16(unsigned int address) {
 unsigned int  m68k_read_memory_32(unsigned int address) {
     if (address < SIZE_OF_VECTORS) {
         uint32_t no = address >> 2;
-#if 1
+#if 0
         printf("/ %08x: exception %d\n", address, no);
         printf("/ pc=%08x, sr=%04x, sp=%08x, usp=%08x, isp=%08x\n"
             "/  d: %08x, %08x, %08x, %08x, %08x, %08x, %08x, %08x\n"
@@ -62,8 +62,8 @@ unsigned int  m68k_read_memory_32(unsigned int address) {
             theCPU->syscallHook(theCPU->ctx);
 
             // rte manually
-            // isp is word-aligned.
             uint32_t isp = m68k_get_reg(NULL, M68K_REG_SP);
+            assert((isp & 1) == 0); // isp is word-aligned.
             sr = ntohs(*(uint16_t *)(theCPU->mmuV2R(theCPU->ctx, isp)));
             isp += 2;
             uint16_t pch = ntohs(*(uint16_t *)(theCPU->mmuV2R(theCPU->ctx, isp)));
