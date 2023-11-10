@@ -7,6 +7,7 @@ static inline void write16(uint8_t *p, uint16_t data) {
     p[1] = data & 0xff;
 }
 
+// TODO: 32bit
 // TODO: virtual memory page をまたぐと動かない
 // TODO: machine 側に持っていくべきか？
 uint16_t pushArgs(cpu_t *pcpu, int argc, uint8_t *args, size_t argsbytes) {

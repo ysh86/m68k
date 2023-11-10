@@ -33,6 +33,12 @@ void init(
     rte(pcpu, 0x0000, sp, SIZE_OF_VECTORS, pc, pc);
 }
 
+uint32_t getSP(cpu_t *pcpu) {
+    return m68k_get_reg(NULL, M68K_REG_SP);
+}
+uint32_t getPC(cpu_t *pcpu) {
+    return m68k_get_reg(NULL, M68K_REG_PC);
+}
 uint32_t rte(cpu_t *pcpu, uint16_t ustatus, uint32_t usp, uint32_t isp, uint32_t ppc, uint32_t pc) {
     uint16_t sr = m68k_get_reg(NULL, M68K_REG_SR);
     assert((sr & 0x3000) == 0x2000); // supervisor mode
