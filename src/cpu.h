@@ -40,6 +40,10 @@ uint16_t pushArgs(cpu_t *pcpu, int argc, uint8_t *args, size_t argsbytes);
 
 uint32_t getSP(cpu_t *pcpu);
 uint32_t getPC(cpu_t *pcpu);
+uint32_t getD0(cpu_t *pcpu);
+void setD0(cpu_t *pcpu, uint32_t d);
+uint32_t getD1(cpu_t *pcpu);
+uint32_t getA0(cpu_t *pcpu);
 uint32_t rte(cpu_t *pcpu, uint16_t ustatus, uint32_t usp, uint32_t isp, uint32_t ppc, uint32_t pc);
 
 uint16_t fetch(cpu_t *pcpu);
