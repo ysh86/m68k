@@ -7,8 +7,8 @@
 #define SIZE_OF_VECTORS 0x0400
 
 typedef void * context_t;
-typedef uint8_t *(*mmu_v2r_t)(context_t ctx, uint16_t vaddr); // TODO: 32bit
-typedef uint16_t (*mmu_r2v_t)(context_t ctx, uint8_t *raddr); // TODO: 32bit
+typedef uint8_t *(*mmu_v2r_t)(context_t ctx, uint32_t vaddr);
+typedef uint32_t (*mmu_r2v_t)(context_t ctx, uint8_t *raddr);
 typedef void (*syscall_t)(context_t ctx);
 typedef void (*syscall_string_t)(context_t ctx, char *str, size_t size, uint8_t id);
 
@@ -35,7 +35,7 @@ void init(
     mmu_r2v_t r2v,
     syscall_t syscallHook,
     syscall_string_t syscallStringHook,
-    uint16_t sp, uint16_t pc); // TODO: 32bit
+    uint32_t sp, uint32_t pc);
 
 uint32_t getSP(cpu_t *pcpu);
 uint32_t getPC(cpu_t *pcpu);

@@ -13,7 +13,7 @@ void init(
     mmu_r2v_t r2v,
     syscall_t syscallHook,
     syscall_string_t syscallStringHook,
-    uint16_t sp, uint16_t pc) {
+    uint32_t sp, uint32_t pc) {
     // support only one cpu
     theCPU = pcpu;
 
