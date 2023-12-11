@@ -34,7 +34,7 @@ void init(
 }
 
 uint32_t getSP(cpu_t *pcpu) {
-    return m68k_get_reg(NULL, M68K_REG_SP);
+    return m68k_get_reg(NULL, M68K_REG_USP);
 }
 uint32_t getPC(cpu_t *pcpu) {
     return m68k_get_reg(NULL, M68K_REG_PC);
