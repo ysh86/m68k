@@ -37,6 +37,7 @@ void init(
     syscall_string_t syscallStringHook,
     uint32_t sp, uint32_t pc);
 
+uint32_t getISP(cpu_t *pcpu);
 uint32_t getSP(cpu_t *pcpu);
 uint32_t getPC(cpu_t *pcpu);
 uint32_t getD0(cpu_t *pcpu);

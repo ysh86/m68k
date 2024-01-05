@@ -33,6 +33,9 @@ void init(
     rte(pcpu, 0x0000, sp, SIZE_OF_VECTORS, pc, pc);
 }
 
+uint32_t getISP(cpu_t *pcpu) {
+    return m68k_get_reg(NULL, M68K_REG_ISP);
+}
 uint32_t getSP(cpu_t *pcpu) {
     return m68k_get_reg(NULL, M68K_REG_USP);
 }
