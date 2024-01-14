@@ -22,8 +22,8 @@ unsigned int  m68k_read_memory_32(unsigned int address) {
     if (address < SIZE_OF_VECTORS) {
         uint32_t no = address >> 2;
 #if 0
-        printf("/ %08x: exception %d\n", address, no);
-        printf("/ pc=%08x, sr=%04x, sp=%08x, usp=%08x, isp=%08x\n"
+        fprintf(stderr, "/ %08x: exception %d\n", address, no);
+        fprintf(stderr, "/ pc=%08x, sr=%04x, sp=%08x, usp=%08x, isp=%08x\n"
             "/  d: %08x, %08x, %08x, %08x, %08x, %08x, %08x, %08x\n"
             "/  a: %08x, %08x, %08x, %08x, %08x, %08x, %08x, %08x\n",
             m68k_get_reg(NULL, M68K_REG_PC),
@@ -50,7 +50,7 @@ unsigned int  m68k_read_memory_32(unsigned int address) {
         );
         for (uint32_t addr = m68k_get_reg(NULL, M68K_REG_ISP); addr < SIZE_OF_VECTORS; addr += 2) {
             uint16_t *ra16 = (uint16_t *)(theCPU->mmuV2R(theCPU->ctx, addr));
-            printf("/    %08x: %04x\n", addr, ntohs(*ra16));
+            fprintf(stderr, "/    %08x: %04x\n", addr, ntohs(*ra16));
         }
 #endif
 
