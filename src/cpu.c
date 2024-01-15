@@ -92,15 +92,17 @@ void exec(cpu_t *pcpu) {
 }
 
 void disasm(cpu_t *pcpu) {
-    uint32_t ppc = m68k_get_reg(NULL, M68K_REG_PPC);
+    uint32_t pc = m68k_get_reg(NULL, M68K_REG_PC);
+    fprintf(stderr, "/ %08x: ", pc);
+
     char str[1024];
-    m68k_disassemble(str, ppc, m68k_get_reg(NULL, M68K_REG_CPU_TYPE));
-    fprintf(stderr, "/ %08x: %s\n", ppc, str);
+    m68k_disassemble(str, pc, m68k_get_reg(NULL, M68K_REG_CPU_TYPE));
+    fprintf(stderr, "%s\n", str);
 #if 0
     fprintf(stderr, "/ pc=%08x, sr=%04x, sp=%08x, usp=%08x, isp=%08x\n"
         "/  d: %08x, %08x, %08x, %08x, %08x, %08x, %08x, %08x\n"
         "/  a: %08x, %08x, %08x, %08x, %08x, %08x, %08x, %08x\n",
-        ppc,
+        pc,
         m68k_get_reg(NULL, M68K_REG_SR),
         m68k_get_reg(NULL, M68K_REG_SP),
         m68k_get_reg(NULL, M68K_REG_USP),
