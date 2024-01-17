@@ -12,7 +12,6 @@ void init(
     mmu_v2r_t v2r,
     mmu_r2v_t r2v,
     syscall_t syscallHook,
-    syscall_string_t syscallStringHook,
     uint32_t sp, uint32_t pc) {
     // support only one cpu
     theCPU = pcpu;
@@ -22,7 +21,6 @@ void init(
     pcpu->mmuV2R = v2r;
     pcpu->mmuR2V = r2v;
     pcpu->syscallHook = syscallHook;
-    pcpu->syscallStringHook = syscallStringHook;
 
     // core
     m68k_set_cpu_type(M68K_CPU_TYPE_68020);
@@ -125,7 +123,4 @@ void disasm(cpu_t *pcpu) {
         m68k_get_reg(NULL, M68K_REG_A7)
     );
 #endif
-
-    // TODO
-    //pcpu->syscallStringHook()
 }
