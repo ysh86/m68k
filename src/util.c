@@ -21,38 +21,6 @@ unsigned int  m68k_read_memory_16(unsigned int address) {
 unsigned int  m68k_read_memory_32(unsigned int address) {
     if (address < SIZE_OF_VECTORS) {
         uint32_t no = address >> 2;
-#if 0
-        fprintf(stderr, "/ %08x: exception %d\n", address, no);
-        fprintf(stderr, "/ pc=%08x, sr=%04x, sp=%08x, usp=%08x, isp=%08x\n"
-            "/  d: %08x, %08x, %08x, %08x, %08x, %08x, %08x, %08x\n"
-            "/  a: %08x, %08x, %08x, %08x, %08x, %08x, %08x, %08x\n",
-            m68k_get_reg(NULL, M68K_REG_PC),
-            m68k_get_reg(NULL, M68K_REG_SR),
-            m68k_get_reg(NULL, M68K_REG_SP),
-            m68k_get_reg(NULL, M68K_REG_USP),
-            m68k_get_reg(NULL, M68K_REG_ISP),
-            m68k_get_reg(NULL, M68K_REG_D0),
-            m68k_get_reg(NULL, M68K_REG_D1),
-            m68k_get_reg(NULL, M68K_REG_D2),
-            m68k_get_reg(NULL, M68K_REG_D3),
-            m68k_get_reg(NULL, M68K_REG_D4),
-            m68k_get_reg(NULL, M68K_REG_D5),
-            m68k_get_reg(NULL, M68K_REG_D6),
-            m68k_get_reg(NULL, M68K_REG_D7),
-            m68k_get_reg(NULL, M68K_REG_A0),
-            m68k_get_reg(NULL, M68K_REG_A1),
-            m68k_get_reg(NULL, M68K_REG_A2),
-            m68k_get_reg(NULL, M68K_REG_A3),
-            m68k_get_reg(NULL, M68K_REG_A4),
-            m68k_get_reg(NULL, M68K_REG_A5),
-            m68k_get_reg(NULL, M68K_REG_A6),
-            m68k_get_reg(NULL, M68K_REG_A7)
-        );
-        for (uint32_t addr = m68k_get_reg(NULL, M68K_REG_ISP); addr < SIZE_OF_VECTORS; addr += 2) {
-            uint16_t *ra16 = (uint16_t *)(theCPU->mmuV2R(theCPU->ctx, addr));
-            fprintf(stderr, "/    %08x: %04x\n", addr, ntohs(*ra16));
-        }
-#endif
 
         if (no == 32) {
             // trap
@@ -83,7 +51,40 @@ unsigned int  m68k_read_memory_32(unsigned int address) {
             assert((offset&0x0fff) == 0x80);
             return rte(theCPU, sr, usp, isp, pc-2, pc);
         } else {
+#if 1
             fprintf(stderr, "exception %d is not implemented\n", no);
+#else
+            fprintf(stderr, "/ [ERR] %08x: exception %d\n", address, no);
+            fprintf(stderr, "/ pc=%08x, sr=%04x, sp=%08x, usp=%08x, isp=%08x\n"
+                "/  d: %08x, %08x, %08x, %08x, %08x, %08x, %08x, %08x\n"
+                "/  a: %08x, %08x, %08x, %08x, %08x, %08x, %08x, %08x\n",
+                m68k_get_reg(NULL, M68K_REG_PC),
+                m68k_get_reg(NULL, M68K_REG_SR),
+                m68k_get_reg(NULL, M68K_REG_SP),
+                m68k_get_reg(NULL, M68K_REG_USP),
+                m68k_get_reg(NULL, M68K_REG_ISP),
+                m68k_get_reg(NULL, M68K_REG_D0),
+                m68k_get_reg(NULL, M68K_REG_D1),
+                m68k_get_reg(NULL, M68K_REG_D2),
+                m68k_get_reg(NULL, M68K_REG_D3),
+                m68k_get_reg(NULL, M68K_REG_D4),
+                m68k_get_reg(NULL, M68K_REG_D5),
+                m68k_get_reg(NULL, M68K_REG_D6),
+                m68k_get_reg(NULL, M68K_REG_D7),
+                m68k_get_reg(NULL, M68K_REG_A0),
+                m68k_get_reg(NULL, M68K_REG_A1),
+                m68k_get_reg(NULL, M68K_REG_A2),
+                m68k_get_reg(NULL, M68K_REG_A3),
+                m68k_get_reg(NULL, M68K_REG_A4),
+                m68k_get_reg(NULL, M68K_REG_A5),
+                m68k_get_reg(NULL, M68K_REG_A6),
+                m68k_get_reg(NULL, M68K_REG_A7)
+            );
+            for (uint32_t addr = m68k_get_reg(NULL, M68K_REG_ISP); addr < SIZE_OF_VECTORS; addr += 2) {
+                uint16_t *ra16 = (uint16_t *)(theCPU->mmuV2R(theCPU->ctx, addr));
+                fprintf(stderr, "/    %08x: %04x\n", addr, ntohs(*ra16));
+            }
+#endif
             exit(-1);
         }
     }
@@ -127,13 +128,25 @@ unsigned int m68k_read_disassembler_32 (unsigned int address) {
 
 // Write to anywhere
 void m68k_write_memory_8(unsigned int address, unsigned int value) {
+    if (theCPU->mmuIsWritable && theCPU->mmuIsWritable(theCPU->ctx, address) == NULL) {
+        fprintf(stderr, "/ [ERR] %08x: NOT writable: value %02x\n", address, value);
+        exit(-1);
+    }
     *theCPU->mmuV2R(theCPU->ctx, address) = value & 0xff;
 }
 void m68k_write_memory_16(unsigned int address, unsigned int value) {
+    if (theCPU->mmuIsWritable && theCPU->mmuIsWritable(theCPU->ctx, address) == NULL) {
+        fprintf(stderr, "/ [ERR] %08x: NOT writable: value %04x\n", address, value);
+        exit(-1);
+    }
     *theCPU->mmuV2R(theCPU->ctx, address) = (value >> 8) & 0xff;
     *theCPU->mmuV2R(theCPU->ctx, address+1) = value & 0xff;
 }
 void m68k_write_memory_32(unsigned int address, unsigned int value) {
+    if (theCPU->mmuIsWritable && theCPU->mmuIsWritable(theCPU->ctx, address) == NULL) {
+        fprintf(stderr, "/ [ERR] %08x: NOT writable: value %08x\n", address, value);
+        exit(-1);
+    }
     *theCPU->mmuV2R(theCPU->ctx, address) = (value >> 24) & 0xff;
     *theCPU->mmuV2R(theCPU->ctx, address+1) = (value >> 16) & 0xff;
     *theCPU->mmuV2R(theCPU->ctx, address+2) = (value >> 8) & 0xff;

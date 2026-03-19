@@ -14,6 +14,7 @@ typedef void (*syscall_t)(context_t ctx);
 struct cpu_tag {
     // machine
     context_t ctx;
+    mmu_v2r_t mmuIsWritable;
     mmu_v2r_t mmuV2R;
     mmu_r2v_t mmuR2V;
     syscall_t syscallHook;
@@ -29,6 +30,7 @@ typedef struct cpu_tag cpu_t;
 void init(
     cpu_t *pcpu,
     context_t ctx,
+    mmu_v2r_t isWritable,
     mmu_v2r_t v2r,
     mmu_r2v_t r2v,
     syscall_t syscallHook,
